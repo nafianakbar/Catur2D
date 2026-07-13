@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Woodland Chess — Catur Kayu Hutan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Bitter:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --wood-dark:#4a3220;
+    --wood-mid:#6b4a2e;
+    --wood-light:#8a6339;
+    --parchment:#efe4c8;
+    --moss-dark:#465538;
+    --moss-mid:#5c6f47;
+    --square-light:#e9dfc0;
+    --square-dark:#4f5d40;
+    --amber:#d9a441;
+    --amber-glow:rgba(217,164,65,.55);
+    --ember:#b3453a;
+    --ink:#2b2013;
+    --ink-soft:#4a3d2c;
+    --paper:#f6efdc;
+    --paper-shadow:rgba(43,32,19,.25);
+  }
+
+  *{box-sizing:border-box;}
+
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      linear-gradient(180deg, #cfe0e8 0%, #f2d9a7 38%, #eab672 55%, #d98a4f 72%, #7ba05b 100%);
+    color:var(--ink);
+    font-family:'Bitter', serif;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:28px 16px 60px;
+  }
+
+  .wrap{
+    width:100%;
+    max-width:1080px;
+    position:relative;
+    z-index:2;
+  }
+
+  /* ---------- SCENERY ---------- */
+  #sceneBg{
+    position:fixed;
+    inset:0;
+    z-index:0;
+    overflow:hidden;
+    pointer-events:none;
+  }
+  #sceneBg svg{
+    width:100%;
+    height:100%;
+    display:block;
+  }
+  .sun{
+    animation:sunGlow 6s ease-in-out infinite;
+    transform-origin:center;
+  }
+  @keyframes sunGlow{
+    0%,100%{ opacity:.9; }
+    50%{ opacity:1; }
+  }
+  .bird{
+    animation:birdDrift 22s linear infinite;
+  }
+  .bird.b2{ animation-duration:28s; animation-delay:-6s; }
+  .bird.b3{ animation-duration:19s; animation-delay:-11s; }
+  @keyframes birdDrift{
+    0%{ transform:translateX(-6%); }
+    100%{ transform:translateX(106%); }
+  }
+
+  #leafLayer{
+    position:fixed;
+    inset:0;
+    z-index:1;
+    overflow:hidden;
+    pointer-events:none;
+  }
+  .leaf-drop{
+    position:absolute;
+    top:-8vh;
+    animation-name:leafFall;
+    animation-timing-function:linear;
+    animation-iteration-count:infinite;
+    will-change:transform;
+  }
+  .leaf-glyph{
+    display:inline-block;
+    animation-name:leafSway;
+    animation-timing-function:ease-in-out;
+    animation-iteration-count:infinite;
+    animation-direction:alternate;
+    filter:drop-shadow(0 2px 2px rgba(0,0,0,.25));
+  }
+  @keyframes leafFall{
+    0%{ transform:translateY(-8vh); opacity:0; }
+    6%{ opacity:.95; }
+    92%{ opacity:.9; }
+    100%{ transform:translateY(112vh); opacity:0; }
+  }
+  @keyframes leafSway{
+    from{ transform:translateX(-22px) rotate(-18deg); }
+    to{ transform:translateX(22px) rotate(18deg); }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .leaf-drop, .leaf-glyph, .sun, .bird{ animation:none !important; }
+  }
+
+
+
+  header{
+    text-align:center;
+    margin-bottom:22px;
+  }
+
+  header h1{
+    font-family:'Kalam', cursive;
+    font-size:clamp(2rem, 5vw, 3.1rem);
+    color:#3a2712;
+    margin:0 0 4px;
+    letter-spacing:.5px;
+    text-shadow:0 2px 0 rgba(255,246,222,.5), 0 1px 6px rgba(255,255,255,.4);
+  }
+  header h1 .leaf{
+    display:inline-block;
+    transform:rotate(-8deg);
+  }
+
+  header p{
+    margin:0;
+    color:#4a3416;
+    font-style:italic;
+    font-size:.95rem;
+    text-shadow:0 1px 4px rgba(255,255,255,.4);
+  }
+
+  .board-area{
+    display:flex;
+    gap:26px;
+    align-items:flex-start;
+    justify-content:center;
+    flex-wrap:wrap;
+  }
+
+  /* ---------- BOARD ---------- */
+  .frame{
+    position:relative;
+    padding:22px;
+    border-radius:14px;
+    background:
+      repeating-linear-gradient(90deg, var(--wood-mid) 0 8px, var(--wood-dark) 8px 16px),
+      linear-gradient(160deg, var(--wood-light), var(--wood-dark));
+    box-shadow:
+      0 18px 40px rgba(0,0,0,.5),
+      inset 0 0 0 2px rgba(0,0,0,.25),
+      inset 0 2px 6px rgba(255,255,255,.08);
+  }
+
+  .board-grid{
+    display:grid;
+    grid-template-columns:repeat(8, min(11.2vw, 64px));
+    grid-template-rows:repeat(8, min(11.2vw, 64px));
+    border-radius:4px;
+    overflow:hidden;
+    box-shadow:0 4px 18px rgba(0,0,0,.45), inset 0 0 0 3px var(--wood-dark);
+  }
+
+  .sq{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    user-select:none;
+    cursor:pointer;
+  }
+  .sq.light{ background:var(--square-light); background-image:radial-gradient(circle at 30% 25%, rgba(255,255,255,.15), transparent 60%);}
+  .sq.dark{ background:var(--square-dark); background-image:radial-gradient(circle at 70% 75%, rgba(0,0,0,.15), transparent 60%);}
+
+  .sq.selected{ box-shadow:inset 0 0 0 4px var(--amber); }
+  .sq.last-move{ box-shadow:inset 0 0 0 4px rgba(217,164,65,.55); }
+  .sq.in-check{ box-shadow:inset 0 0 0 4px var(--ember); animation:pulse 1s ease-in-out infinite; }
+
+  @keyframes pulse{
+    0%,100%{ filter:brightness(1); }
+    50%{ filter:brightness(1.25); }
+  }
+
+  .dot{
+    position:absolute;
+    width:26%;
+    height:26%;
+    border-radius:50%;
+    background:rgba(43,32,19,.35);
+    pointer-events:none;
+  }
+  .ring{
+    position:absolute;
+    inset:8%;
+    border-radius:50%;
+    border:4px solid rgba(179,69,58,.65);
+    pointer-events:none;
+  }
+
+  .piece{
+    font-size:min(7.6vw, 44px);
+    line-height:1;
+    filter:drop-shadow(0 3px 2px rgba(0,0,0,.4));
+    transition:transform .12s ease;
+    pointer-events:none;
+  }
+  .sq:hover .piece{ transform:translateY(-2px) scale(1.05); }
+  .piece.white{ color:#f4e9c9; -webkit-text-stroke:1px #7a5a2b; text-shadow:0 1px 0 #a9773a;}
+  .piece.black{ color:#2a1c10; -webkit-text-stroke:1px #0f0a05; text-shadow:0 1px 0 #000; }
+
+  .coords{
+    position:absolute;
+    inset:22px;
+    pointer-events:none;
+  }
+  .file-labels, .rank-labels{
+    position:absolute;
+    display:flex;
+    font-family:'Kalam', cursive;
+    color:var(--parchment);
+    opacity:.75;
+    font-size:12px;
+  }
+  .file-labels{ bottom:-16px; left:0; right:0; justify-content:space-around; }
+  .rank-labels{ top:0; bottom:0; left:-18px; flex-direction:column; justify-content:space-around; }
+
+  /* ---------- SIDE PANEL ---------- */
+  .panel{
+    width:280px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+
+  .card{
+    background:var(--paper);
+    border-radius:10px;
+    padding:14px 16px;
+    box-shadow:0 8px 20px var(--paper-shadow), inset 0 0 0 1px rgba(75,58,30,.15);
+    position:relative;
+  }
+  .card::before{
+    content:"";
+    position:absolute; inset:0;
+    border-radius:10px;
+    background:repeating-linear-gradient(0deg, rgba(75,58,30,.03) 0 2px, transparent 2px 4px);
+    pointer-events:none;
+  }
+
+  .turn-banner{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-family:'Kalam', cursive;
+    font-size:1.3rem;
+    color:var(--ink-soft);
+  }
+  .turn-dot{
+    width:20px; height:20px; border-radius:50%;
+    border:2px solid var(--ink-soft);
+    box-shadow:0 2px 3px rgba(0,0,0,.3);
+    transition:background .2s;
+  }
+  .turn-dot.white{ background:#f4e9c9; }
+  .turn-dot.black{ background:#2a1c10; }
+
+  .status-line{
+    margin-top:4px;
+    font-size:.85rem;
+    color:var(--ember);
+    font-weight:600;
+    min-height:1.1em;
+  }
+
+  .captured-title, .log-title{
+    font-family:'Kalam', cursive;
+    font-size:1.05rem;
+    margin:0 0 8px;
+    color:var(--ink-soft);
+    border-bottom:1px dashed rgba(75,58,30,.35);
+    padding-bottom:4px;
+  }
+
+  .captured-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:2px;
+    min-height:30px;
+    font-size:1.3rem;
+  }
+  .captured-row span{ filter:drop-shadow(0 1px 1px rgba(0,0,0,.3)); }
+  .captured-row.white-lost span{ color:#f4e9c9; -webkit-text-stroke:1px #7a5a2b;}
+  .captured-row.black-lost span{ color:#2a1c10; }
+
+  .log-box{
+    max-height:190px;
+    overflow-y:auto;
+    font-size:.88rem;
+    line-height:1.6;
+    padding-right:4px;
+  }
+  .log-box::-webkit-scrollbar{ width:6px; }
+  .log-box::-webkit-scrollbar-thumb{ background:var(--wood-mid); border-radius:4px; }
+  .log-row{ display:flex; gap:8px; }
+  .log-num{ color:var(--ink-soft); opacity:.6; width:22px; flex-shrink:0; }
+
+  .btn{
+    font-family:'Kalam', cursive;
+    font-size:1.05rem;
+    border:none;
+    cursor:pointer;
+    padding:10px 16px;
+    border-radius:8px;
+    background:linear-gradient(160deg, var(--wood-light), var(--wood-dark));
+    color:var(--parchment);
+    box-shadow:0 5px 0 var(--wood-dark), 0 8px 14px rgba(0,0,0,.35);
+    transition:transform .08s ease, box-shadow .08s ease;
+  }
+  .btn:active{ transform:translateY(4px); box-shadow:0 1px 0 var(--wood-dark), 0 3px 6px rgba(0,0,0,.35); }
+
+  /* ---------- PROMOTION MODAL ---------- */
+  .modal-backdrop{
+    position:fixed; inset:0;
+    background:rgba(20,14,8,.6);
+    display:none;
+    align-items:center; justify-content:center;
+    z-index:50;
+  }
+  .modal-backdrop.show{ display:flex; }
+  .modal{
+    background:var(--paper);
+    border-radius:12px;
+    padding:20px 24px;
+    text-align:center;
+    box-shadow:0 20px 50px rgba(0,0,0,.5);
+  }
+  .modal h3{ font-family:'Kalam', cursive; margin:0 0 12px; color:var(--ink-soft);}
+  .promo-options{ display:flex; gap:10px; }
+  .promo-options button{
+    font-size:2rem;
+    width:60px; height:60px;
+    border-radius:8px;
+    border:2px solid var(--wood-mid);
+    background:var(--square-light);
+    cursor:pointer;
+  }
+  .promo-options button:hover{ background:var(--amber-glow); }
+
+  footer{
+    text-align:center;
+    margin-top:28px;
+    color:#e4ddc0;
+    font-size:.8rem;
+    font-style:italic;
+    text-shadow:0 1px 2px rgba(0,0,0,.2);
+  }
+
+  @media (max-width:720px){
+    .panel{ width:100%; max-width:400px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="sceneBg" aria-hidden="true">
+  <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice">
+    <defs>
+      <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#cfe0e8"/>
+        <stop offset="38%" stop-color="#f2d9a7"/>
+        <stop offset="55%" stop-color="#eab672"/>
+        <stop offset="72%" stop-color="#d98a4f"/>
+        <stop offset="100%" stop-color="#7ba05b"/>
+      </linearGradient>
+      <radialGradient id="sunGrad" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#fff6d8" stop-opacity="1"/>
+        <stop offset="55%" stop-color="#ffdf94" stop-opacity=".85"/>
+        <stop offset="100%" stop-color="#ffdf94" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+
+    <rect x="0" y="0" width="1600" height="900" fill="url(#skyGrad)"/>
+
+    <circle class="sun" cx="290" cy="260" r="150" fill="url(#sunGrad)"/>
+    <circle cx="290" cy="260" r="62" fill="#fff3d0" opacity=".95"/>
+
+    <g class="bird" fill="none" stroke="#5a4630" stroke-width="4" stroke-linecap="round" opacity=".55">
+      <path d="M0,150 q14,-16 28,0 q14,-16 28,0"/>
+    </g>
+    <g class="bird b2" fill="none" stroke="#5a4630" stroke-width="4" stroke-linecap="round" opacity=".45">
+      <path d="M0,210 q12,-14 24,0 q12,-14 24,0"/>
+    </g>
+    <g class="bird b3" fill="none" stroke="#5a4630" stroke-width="3.5" stroke-linecap="round" opacity=".4">
+      <path d="M0,120 q10,-12 20,0 q10,-12 20,0"/>
+    </g>
+
+    <!-- far hills -->
+    <path d="M0,560 Q220,505 480,545 T980,530 T1600,545 L1600,900 L0,900 Z" fill="#8a9d6e" opacity=".55"/>
+    <!-- far tree row -->
+    <g fill="#7d9163" opacity=".55">
+      <path d="M120,555 l24,-58 24,58 z M138,555 l6,-70 6,70 z"/>
+      <path d="M330,540 l22,-54 22,54 z M347,540 l5,-64 5,64 z"/>
+      <path d="M560,552 l24,-58 24,58 z M578,552 l6,-70 6,70 z"/>
+      <path d="M840,536 l22,-54 22,54 z M857,536 l5,-64 5,64 z"/>
+      <path d="M1120,550 l24,-58 24,58 z M1138,550 l6,-70 6,70 z"/>
+      <path d="M1380,538 l22,-54 22,54 z M1397,538 l5,-64 5,64 z"/>
+    </g>
+
+    <!-- mid hills -->
+    <path d="M0,650 Q260,590 560,635 T1120,620 T1600,640 L1600,900 L0,900 Z" fill="#5c7a44" opacity=".8"/>
+    <!-- mid tree row -->
+    <g fill="#4f6b3a" opacity=".85">
+      <path d="M60,650 l30,-74 30,74 z M83,650 l7,-88 7,88 z"/>
+      <path d="M230,638 l32,-78 32,78 z M254,638 l8,-92 8,92 z"/>
+      <path d="M430,655 l30,-74 30,74 z M453,655 l7,-88 7,88 z"/>
+      <path d="M660,630 l34,-82 34,82 z M685,630 l9,-96 9,96 z"/>
+      <path d="M900,648 l30,-74 30,74 z M923,648 l7,-88 7,88 z"/>
+      <path d="M1120,624 l32,-78 32,78 z M1144,624 l8,-92 8,92 z"/>
+      <path d="M1340,644 l30,-74 30,74 z M1363,644 l7,-88 7,88 z"/>
+      <path d="M1520,632 l28,-70 28,70 z M1541,632 l7,-84 7,84 z"/>
+    </g>
+
+    <!-- near hills -->
+    <path d="M0,760 Q300,700 640,745 T1280,730 T1600,748 L1600,900 L0,900 Z" fill="#3f5a37"/>
+    <!-- near tree row (bigger, darker) -->
+    <g fill="#33491f">
+      <path d="M40,760 l40,-100 40,100 z M70,760 l10,-118 10,118 z"/>
+      <path d="M280,742 l44,-108 44,108 z M312,742 l11,-128 11,128 z"/>
+      <path d="M560,758 l40,-100 40,100 z M590,758 l10,-118 10,118 z"/>
+      <path d="M860,732 l46,-114 46,114 z M894,732 l11,-134 11,134 z"/>
+      <path d="M1150,752 l40,-100 40,100 z M1180,752 l10,-118 10,118 z"/>
+      <path d="M1420,736 l44,-108 44,108 z M1452,736 l11,-128 11,128 z"/>
+    </g>
+  </svg>
+</div>
+
+<div id="leafLayer" aria-hidden="true"></div>
+
+<div class="wrap">
+  <header>
+    <h1><span class="leaf">🍃</span> Catur 2D <span class="leaf" style="transform:rotate(8deg)">🍂</span></h1>
+    <p>catur kayu ukiran, dimainkan berdua di bawah pohon tua</p>
+  </header>
+
+  <div class="board-area">
+    <div class="frame">
+      <div class="board-grid" id="board"></div>
+      <div class="coords">
+        <div class="file-labels" id="fileLabels"></div>
+        <div class="rank-labels" id="rankLabels"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="card">
+        <div class="turn-banner">
+          <div class="turn-dot white" id="turnDot"></div>
+          <span id="turnText">Giliran Putih</span>
+        </div>
+        <div class="status-line" id="statusLine"></div>
+      </div>
+
+      <div class="card">
+        <p class="captured-title">Terkumpul di tepi papan</p>
+        <div class="captured-row black-lost" id="capBlack" title="Bidak hitam yang tertangkap"></div>
+        <div class="captured-row white-lost" id="capWhite" title="Bidak putih yang tertangkap"></div>
+      </div>
+
+      <div class="card">
+        <p class="log-title">Catatan Langkah</p>
+        <div class="log-box" id="logBox"></div>
+      </div>
+
+      <button class="btn" id="resetBtn">🌰 Mulai Ulang</button>
+    </div>
+  </div>
+
+  <footer></footer>
+</div>
+
+<div class="modal-backdrop" id="promoModal">
+  <div class="modal">
+    <h3>Pilih bidak promosi</h3>
+    <div class="promo-options" id="promoOptions"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const GLYPH = {
+    w:{K:'♔',Q:'♕',R:'♖',B:'♗',N:'♘',P:'♙'},
+    b:{K:'♚',Q:'♛',R:'♜',B:'♝',N:'♞',P:'♟'}
+  };
+  const NAME = {K:'Raja',Q:'Menteri',R:'Benteng',B:'Gajah',N:'Kuda',P:'Pion'};
+
+  const FILES = ['a','b','c','d','e','f','g','h'];
+
+  function initialBoard(){
+    const b = Array.from({length:8}, () => Array(8).fill(null));
+    const backRank = ['R','N','B','Q','K','B','N','R'];
+    for(let c=0;c<8;c++){
+      b[0][c] = {type:backRank[c], color:'b'};
+      b[1][c] = {type:'P', color:'b'};
+      b[6][c] = {type:'P', color:'w'};
+      b[7][c] = {type:backRank[c], color:'w'};
+    }
+    return b;
+  }
+
+  let state = {
+    board: initialBoard(),
+    turn: 'w',
+    castling: {wK:true, wQ:true, bK:true, bQ:true},
+    enPassant: null, // {r,c} square that can be captured onto
+    selected: null,
+    legalTargets: [],
+    lastMove: null, // {from:{r,c}, to:{r,c}}
+    captured: {w:[], b:[]}, // pieces captured: w = white pieces captured, b = black pieces captured
+    moveLog: [],
+    gameOver: false
+  };
+
+  const boardEl = document.getElementById('board');
+  const fileLabelsEl = document.getElementById('fileLabels');
+  const rankLabelsEl = document.getElementById('rankLabels');
+  const turnDot = document.getElementById('turnDot');
+  const turnText = document.getElementById('turnText');
+  const statusLine = document.getElementById('statusLine');
+  const capBlackEl = document.getElementById('capBlack');
+  const capWhiteEl = document.getElementById('capWhite');
+  const logBox = document.getElementById('logBox');
+  const promoModal = document.getElementById('promoModal');
+  const promoOptions = document.getElementById('promoOptions');
+
+  FILES.forEach(f => {
+    const d = document.createElement('div');
+    d.textContent = f;
+    fileLabelsEl.appendChild(d);
+  });
+  for(let r=8;r>=1;r--){
+    const d = document.createElement('div');
+    d.textContent = r;
+    rankLabelsEl.appendChild(d);
+  }
+
+  function inBounds(r,c){ return r>=0 && r<8 && c>=0 && c<8; }
+  function cloneBoard(b){ return b.map(row => row.map(cell => cell ? {...cell} : null)); }
+  function opposite(color){ return color === 'w' ? 'b' : 'w'; }
+
+  function findKing(board, color){
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+      const p = board[r][c];
+      if(p && p.type === 'K' && p.color === color) return {r,c};
+    }
+    return null;
+  }
+
+  // Is square (r,c) attacked by `byColor` pieces on given board?
+  function isAttacked(board, r, c, byColor){
+    // pawns
+    const pawnDir = byColor === 'w' ? 1 : -1; // attacking pawn sits at r+pawnDir relative to target... compute reverse
+    const pr = r + pawnDir;
+    for(const dc of [-1,1]){
+      const pc = c + dc;
+      if(inBounds(pr,pc)){
+        const p = board[pr][pc];
+        if(p && p.type === 'P' && p.color === byColor) return true;
+      }
+    }
+    // knights
+    const knightDeltas = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+    for(const [dr,dc] of knightDeltas){
+      const nr=r+dr, nc=c+dc;
+      if(inBounds(nr,nc)){
+        const p = board[nr][nc];
+        if(p && p.type==='N' && p.color===byColor) return true;
+      }
+    }
+    // king
+    for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
+      if(dr===0 && dc===0) continue;
+      const nr=r+dr, nc=c+dc;
+      if(inBounds(nr,nc)){
+        const p = board[nr][nc];
+        if(p && p.type==='K' && p.color===byColor) return true;
+      }
+    }
+    // sliding: rook/queen (straight)
+    const straightDirs = [[-1,0],[1,0],[0,-1],[0,1]];
+    for(const [dr,dc] of straightDirs){
+      let nr=r+dr, nc=c+dc;
+      while(inBounds(nr,nc)){
+        const p = board[nr][nc];
+        if(p){
+          if(p.color===byColor && (p.type==='R' || p.type==='Q')) return true;
+          break;
+        }
+        nr+=dr; nc+=dc;
+      }
+    }
+    // sliding: bishop/queen (diagonal)
+    const diagDirs = [[-1,-1],[-1,1],[1,-1],[1,1]];
+    for(const [dr,dc] of diagDirs){
+      let nr=r+dr, nc=c+dc;
+      while(inBounds(nr,nc)){
+        const p = board[nr][nc];
+        if(p){
+          if(p.color===byColor && (p.type==='B' || p.type==='Q')) return true;
+          break;
+        }
+        nr+=dr; nc+=dc;
+      }
+    }
+    return false;
+  }
+
+  function inCheck(board, color){
+    const k = findKing(board, color);
+    if(!k) return false;
+    return isAttacked(board, k.r, k.c, opposite(color));
+  }
+
+  // Generate pseudo-legal moves for piece at r,c (does not filter for own-king-check)
+  function pseudoMoves(board, r, c, castling, enPassant){
+    const piece = board[r][c];
+    if(!piece) return [];
+    const moves = [];
+    const color = piece.color;
+
+    function addIfEmptyOrEnemy(nr,nc, opts){
+      if(!inBounds(nr,nc)) return false;
+      const target = board[nr][nc];
+      if(!target){
+        moves.push({r:nr,c:nc, ...opts});
+        return true; // empty, sliding may continue
+      } else if(target.color !== color){
+        moves.push({r:nr,c:nc, capture:true, ...opts});
+        return false; // stop sliding
+      }
+      return false; // own piece, stop
+    }
+
+    if(piece.type === 'P'){
+      const dir = color === 'w' ? -1 : 1;
+      const startRank = color === 'w' ? 6 : 1;
+      const promoRank = color === 'w' ? 0 : 7;
+      // forward one
+      if(inBounds(r+dir,c) && !board[r+dir][c]){
+        moves.push({r:r+dir, c, promo: r+dir===promoRank});
+        // forward two
+        if(r===startRank && !board[r+2*dir][c]){
+          moves.push({r:r+2*dir, c, doubleStep:true});
+        }
+      }
+      // captures
+      for(const dc of [-1,1]){
+        const nr=r+dir, nc=c+dc;
+        if(inBounds(nr,nc)){
+          const target = board[nr][nc];
+          if(target && target.color !== color){
+            moves.push({r:nr,c:nc, capture:true, promo: nr===promoRank});
+          } else if(enPassant && enPassant.r===nr && enPassant.c===nc){
+            moves.push({r:nr,c:nc, capture:true, enPassantCapture:true});
+          }
+        }
+      }
+    }
+
+    if(piece.type === 'N'){
+      const deltas = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+      for(const [dr,dc] of deltas) addIfEmptyOrEnemy(r+dr, c+dc, {});
+    }
+
+    if(piece.type === 'K'){
+      for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
+        if(dr===0 && dc===0) continue;
+        addIfEmptyOrEnemy(r+dr, c+dc, {});
+      }
+      // castling
+      if(!isAttacked(board, r, c, opposite(color))){
+        const rights = castling;
+        const homeRank = color === 'w' ? 7 : 0;
+        if(r === homeRank && c === 4){
+          // king side
+          const kFlag = color === 'w' ? rights.wK : rights.bK;
+          if(kFlag && !board[r][5] && !board[r][6]){
+            const rook = board[r][7];
+            if(rook && rook.type==='R' && rook.color===color){
+              if(!isAttacked(board,r,5,opposite(color)) && !isAttacked(board,r,6,opposite(color))){
+                moves.push({r, c:6, castle:'K'});
+              }
+            }
+          }
+          const qFlag = color === 'w' ? rights.wQ : rights.bQ;
+          if(qFlag && !board[r][3] && !board[r][2] && !board[r][1]){
+            const rook = board[r][0];
+            if(rook && rook.type==='R' && rook.color===color){
+              if(!isAttacked(board,r,3,opposite(color)) && !isAttacked(board,r,2,opposite(color))){
+                moves.push({r, c:2, castle:'Q'});
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if(piece.type === 'R' || piece.type === 'Q'){
+      const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+      for(const [dr,dc] of dirs){
+        let nr=r+dr, nc=c+dc;
+        while(addIfEmptyOrEnemy(nr,nc,{})){ nr+=dr; nc+=dc; }
+      }
+    }
+    if(piece.type === 'B' || piece.type === 'Q'){
+      const dirs = [[-1,-1],[-1,1],[1,-1],[1,1]];
+      for(const [dr,dc] of dirs){
+        let nr=r+dr, nc=c+dc;
+        while(addIfEmptyOrEnemy(nr,nc,{})){ nr+=dr; nc+=dc; }
+      }
+    }
+
+    return moves;
+  }
+
+  function applyMoveToBoard(board, from, to, moveInfo, promoType){
+    const piece = board[from.r][from.c];
+    let captured = null;
+
+    if(moveInfo.enPassantCapture){
+      const dir = piece.color === 'w' ? 1 : -1;
+      captured = board[to.r+dir][to.c];
+      board[to.r+dir][to.c] = null;
+    } else if(board[to.r][to.c]){
+      captured = board[to.r][to.c];
+    }
+
+    board[to.r][to.c] = piece;
+    board[from.r][from.c] = null;
+
+    if(moveInfo.promo){
+      board[to.r][to.c] = {type: promoType || 'Q', color: piece.color};
+    }
+
+    if(moveInfo.castle === 'K'){
+      const homeRank = from.r;
+      board[homeRank][5] = board[homeRank][7];
+      board[homeRank][7] = null;
+    } else if(moveInfo.castle === 'Q'){
+      const homeRank = from.r;
+      board[homeRank][3] = board[homeRank][0];
+      board[homeRank][0] = null;
+    }
+
+    return captured;
+  }
+
+  function legalMovesFor(r,c){
+    const piece = state.board[r][c];
+    if(!piece) return [];
+    const pseudo = pseudoMoves(state.board, r, c, state.castling, state.enPassant);
+    const legal = [];
+    for(const m of pseudo){
+      const testBoard = cloneBoard(state.board);
+      applyMoveToBoard(testBoard, {r,c}, {r:m.r,c:m.c}, m, 'Q');
+      if(!inCheck(testBoard, piece.color)){
+        legal.push(m);
+      }
+    }
+    return legal;
+  }
+
+  function allLegalMoves(color){
+    const all = [];
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+      const p = state.board[r][c];
+      if(p && p.color === color){
+        const moves = legalMovesFor(r,c);
+        moves.forEach(m => all.push({from:{r,c}, move:m}));
+      }
+    }
+    return all;
+  }
+
+  function squareName(r,c){
+    return FILES[c] + (8-r);
+  }
+
+  function pendingPromotion(from, to, moveInfo){
+    return new Promise(resolve => {
+      promoOptions.innerHTML = '';
+      const color = state.board[from.r][from.c].color;
+      ['Q','R','B','N'].forEach(t => {
+        const btn = document.createElement('button');
+        btn.textContent = GLYPH[color][t];
+        btn.className = color === 'w' ? '' : '';
+        btn.style.color = color === 'w' ? '#f4e9c9' : '#2a1c10';
+        btn.addEventListener('click', () => {
+          promoModal.classList.remove('show');
+          resolve(t);
+        });
+        promoOptions.appendChild(btn);
+      });
+      promoModal.classList.add('show');
+    });
+  }
+
+  async function makeMove(from, to, moveInfo){
+    const piece = state.board[from.r][from.c];
+    const isCastle = !!moveInfo.castle;
+    const isEnPassant = !!moveInfo.enPassantCapture;
+    let promoType = null;
+
+    if(moveInfo.promo){
+      promoType = await pendingPromotion(from, to, moveInfo);
+    }
+
+    const captured = applyMoveToBoard(state.board, from, to, moveInfo, promoType);
+
+    if(captured){
+      state.captured[captured.color].push(captured.type);
+    }
+
+    // update castling rights
+    if(piece.type === 'K'){
+      if(piece.color === 'w'){ state.castling.wK = false; state.castling.wQ = false; }
+      else { state.castling.bK = false; state.castling.bQ = false; }
+    }
+    if(piece.type === 'R'){
+      if(from.r===7 && from.c===0) state.castling.wQ = false;
+      if(from.r===7 && from.c===7) state.castling.wK = false;
+      if(from.r===0 && from.c===0) state.castling.bQ = false;
+      if(from.r===0 && from.c===7) state.castling.bK = false;
+    }
+    // rook captured on original square also revokes rights
+    if(to.r===7 && to.c===0) state.castling.wQ = false;
+    if(to.r===7 && to.c===7) state.castling.wK = false;
+    if(to.r===0 && to.c===0) state.castling.bQ = false;
+    if(to.r===0 && to.c===7) state.castling.bK = false;
+
+    // update en passant target
+    if(moveInfo.doubleStep){
+      const dir = piece.color === 'w' ? -1 : 1;
+      state.enPassant = {r: from.r + dir, c: from.c};
+    } else {
+      state.enPassant = null;
+    }
+
+    // build notation
+    const pieceLetter = piece.type === 'P' ? '' : piece.type;
+    let notation;
+    if(isCastle){
+      notation = moveInfo.castle === 'K' ? 'O-O' : 'O-O-O';
+    } else {
+      const captureMark = (moveInfo.capture || isEnPassant) ? 'x' : '';
+      const fromFile = piece.type === 'P' && captureMark ? FILES[from.c] : '';
+      notation = pieceLetter + fromFile + captureMark + squareName(to.r, to.c);
+      if(promoType) notation += '=' + promoType;
+    }
+
+    state.lastMove = {from, to};
+    state.turn = opposite(state.turn);
+
+    const opponentInCheck = inCheck(state.board, state.turn);
+    const opponentMoves = allLegalMoves(state.turn);
+    let suffix = '';
+    if(opponentInCheck && opponentMoves.length === 0){
+      suffix = '#';
+      state.gameOver = true;
+    } else if(opponentInCheck){
+      suffix = '+';
+    } else if(opponentMoves.length === 0){
+      state.gameOver = 'stalemate';
+    }
+
+    state.moveLog.push({color: piece.color, text: notation + suffix});
+
+    state.selected = null;
+    state.legalTargets = [];
+
+    render();
+  }
+
+  function handleSquareClick(r,c){
+    if(state.gameOver) return;
+    const piece = state.board[r][c];
+
+    if(state.selected){
+      const isTarget = state.legalTargets.find(m => m.r===r && m.c===c);
+      if(isTarget){
+        makeMove(state.selected, {r,c}, isTarget);
+        return;
+      }
+      if(piece && piece.color === state.turn){
+        state.selected = {r,c};
+        state.legalTargets = legalMovesFor(r,c);
+        render();
+        return;
+      }
+      state.selected = null;
+      state.legalTargets = [];
+      render();
+      return;
+    }
+
+    if(piece && piece.color === state.turn){
+      state.selected = {r,c};
+      state.legalTargets = legalMovesFor(r,c);
+      render();
+    }
+  }
+
+  function render(){
+    boardEl.innerHTML = '';
+    const kingPos = findKing(state.board, state.turn);
+    const kingInCheck = inCheck(state.board, state.turn);
+
+    for(let r=0;r<8;r++){
+      for(let c=0;c<8;c++){
+        const sq = document.createElement('div');
+        sq.className = 'sq ' + ((r+c)%2===0 ? 'light' : 'dark');
+
+        if(state.selected && state.selected.r===r && state.selected.c===c){
+          sq.classList.add('selected');
+        }
+        if(state.lastMove && ((state.lastMove.from.r===r && state.lastMove.from.c===c) || (state.lastMove.to.r===r && state.lastMove.to.c===c))){
+          sq.classList.add('last-move');
+        }
+        if(kingInCheck && kingPos && kingPos.r===r && kingPos.c===c){
+          sq.classList.add('in-check');
+        }
+
+        const piece = state.board[r][c];
+        if(piece){
+          const span = document.createElement('span');
+          span.className = 'piece ' + (piece.color==='w' ? 'white' : 'black');
+          span.textContent = GLYPH[piece.color][piece.type];
+          sq.appendChild(span);
+        }
+
+        const target = state.legalTargets.find(m => m.r===r && m.c===c);
+        if(target){
+          const marker = document.createElement('div');
+          marker.className = target.capture ? 'ring' : 'dot';
+          sq.appendChild(marker);
+        }
+
+        sq.addEventListener('click', () => handleSquareClick(r,c));
+        boardEl.appendChild(sq);
+      }
+    }
+
+    turnDot.className = 'turn-dot ' + (state.turn === 'w' ? 'white' : 'black');
+    turnText.textContent = state.turn === 'w' ? 'Giliran Putih' : 'Giliran Hitam';
+
+    if(state.gameOver === true){
+      const winner = state.turn === 'w' ? 'Hitam' : 'Putih';
+      statusLine.textContent = `Skakmat! ${winner} menang.`;
+    } else if(state.gameOver === 'stalemate'){
+      statusLine.textContent = 'Buntu (stalemate) — seri.';
+    } else if(kingInCheck){
+      statusLine.textContent = 'Skak!';
+    } else {
+      statusLine.textContent = '';
+    }
+
+    capBlackEl.innerHTML = state.captured.b.map(t => `<span>${GLYPH.b[t]}</span>`).join('');
+    capWhiteEl.innerHTML = state.captured.w.map(t => `<span>${GLYPH.w[t]}</span>`).join('');
+
+    logBox.innerHTML = '';
+    for(let i=0;i<state.moveLog.length;i+=2){
+      const row = document.createElement('div');
+      row.className = 'log-row';
+      const num = document.createElement('div');
+      num.className = 'log-num';
+      num.textContent = (i/2 + 1) + '.';
+      row.appendChild(num);
+      const white = document.createElement('div');
+      white.textContent = state.moveLog[i] ? state.moveLog[i].text : '';
+      row.appendChild(white);
+      if(state.moveLog[i+1]){
+        const black = document.createElement('div');
+        black.textContent = state.moveLog[i+1].text;
+        row.appendChild(black);
+      }
+      logBox.appendChild(row);
+    }
+    logBox.scrollTop = logBox.scrollHeight;
+  }
+
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    state = {
+      board: initialBoard(),
+      turn: 'w',
+      castling: {wK:true, wQ:true, bK:true, bQ:true},
+      enPassant: null,
+      selected: null,
+      legalTargets: [],
+      lastMove: null,
+      captured: {w:[], b:[]},
+      moveLog: [],
+      gameOver: false
+    };
+    render();
+  });
+
+  render();
+
+  // ---------- Falling leaves ----------
+  const leafLayer = document.getElementById('leafLayer');
+  const LEAF_GLYPHS = ['🍁','🍂','🍃'];
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function spawnLeaf(){
+    if(reduceMotion) return;
+    const drop = document.createElement('div');
+    drop.className = 'leaf-drop';
+    const left = Math.random() * 100;
+    const fallDuration = 8 + Math.random() * 9; // 8s - 17s
+    drop.style.left = left + 'vw';
+    drop.style.animationDuration = fallDuration + 's';
+
+    const glyph = document.createElement('span');
+    glyph.className = 'leaf-glyph';
+    glyph.textContent = LEAF_GLYPHS[Math.floor(Math.random() * LEAF_GLYPHS.length)];
+    const size = 14 + Math.random() * 16;
+    glyph.style.fontSize = size + 'px';
+    glyph.style.animationDuration = (2 + Math.random() * 2.5) + 's';
+    glyph.style.opacity = (0.55 + Math.random() * 0.4).toFixed(2);
+
+    drop.appendChild(glyph);
+    leafLayer.appendChild(drop);
+
+    setTimeout(() => drop.remove(), fallDuration * 1000 + 200);
+  }
+
+  if(!reduceMotion){
+    // seed initial leaves already mid-fall so the scene isn't empty on load
+    for(let i=0;i<14;i++){
+      setTimeout(spawnLeaf, i * 300);
+    }
+    setInterval(spawnLeaf, 650);
+  }
+})();
+</script>
+</body>
+</html>
